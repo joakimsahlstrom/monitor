@@ -62,4 +62,28 @@ public class Service {
                 ", lastCheck=" + lastCheck +
                 '}';
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Service service = (Service) o;
+
+        if (id != null ? !id.equals(service.id) : service.id != null) return false;
+        if (name != null ? !name.equals(service.name) : service.name != null) return false;
+        if (url != null ? !url.equals(service.url) : service.url != null) return false;
+        if (status != service.status) return false;
+        return lastCheck != null ? lastCheck.equals(service.lastCheck) : service.lastCheck == null;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = id != null ? id.hashCode() : 0;
+        result = 31 * result + (name != null ? name.hashCode() : 0);
+        result = 31 * result + (url != null ? url.hashCode() : 0);
+        result = 31 * result + (status != null ? status.hashCode() : 0);
+        result = 31 * result + (lastCheck != null ? lastCheck.hashCode() : 0);
+        return result;
+    }
 }

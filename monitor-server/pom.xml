@@ -11,9 +11,14 @@
     </parent>
 
     <artifactId>monitor-server</artifactId>
-    <packaging>pom</packaging>
+    <packaging>jar</packaging>
 
     <dependencies>
+        <dependency>
+            <groupId>io.reactivex</groupId>
+            <artifactId>rxjava</artifactId>
+        </dependency>
+
         <!-- Test dependencies -->
         <dependency>
             <groupId>junit</groupId>

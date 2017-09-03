@@ -3,7 +3,9 @@ package se.joakimsahlstrom.monitor;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.rxjava.core.MultiMap;
 import io.vertx.rxjava.core.Vertx;
+import io.vertx.rxjava.ext.web.client.WebClient;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -12,7 +14,9 @@ import se.joakimsahlstrom.monitor.model.Service;
 import se.joakimsahlstrom.monitor.model.ServiceId;
 import se.joakimsahlstrom.monitor.model.ServiceName;
 import se.joakimsahlstrom.monitor.model.Status;
+import se.joakimsahlstrom.monitor.persistence.MonitorRepositoryVertxFile;
 
+import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.LocalDateTime;
@@ -27,20 +31,26 @@ import static se.joakimsahlstrom.monitor.MonitorVerticle.ServiceView.DATE_TIME_F
 
 @RunWith(VertxUnitRunner.class)
 public class MonitorVerticleTest {
+    private static final String DB_FILENAME = MonitorVerticleTest.class.getName() + "_testdata.json";
 
     private Vertx vertx;
-    private MyContract contract;
 
-    // would love to remove this hack but since i know nothing of vertx DI i'll settle for this... :-/
-    private static final AtomicReference<MonitorService> monitorServiceReference = new AtomicReference<>();
-    private static final AtomicReference<StatusReaderInMemory> statusReaderReference = new AtomicReference<>();
+    // For some reason VertxUnitRunner attempts to run my protected non-test methods (getAllServices, add, remove) as
+    // tests and I this stops us from letting MonitorVerticleTest directly extend MonitorContract
+    // (see: MonitorServiceImplTest) but instead we  have to use this kind of ugly hack. Won't dive in to vertx test
+    // internals to fix this so it'll have to stay for now
+    private MonitorContractHttp contract;
 
     public static class MonitorVerticleTestsetup extends MonitorVerticle {
+        // would love to remove this hack but since i know nothing of vertx DI i'll settle for this... :-/
+        private static final AtomicReference<MonitorService> monitorServiceReference = new AtomicReference<>();
+        private static final AtomicReference<StatusReaderInMemory> statusReaderReference = new AtomicReference<>();
+
         public void start() {
             StatusReaderInMemory statusReader = new StatusReaderInMemory();
-            MonitorServiceImpl monitorService = new MonitorServiceImpl(new MonitorRepositoryInMemory(), statusReader);
-            MonitorVerticleTest.monitorServiceReference.set(monitorService);
-            MonitorVerticleTest.statusReaderReference.set(statusReader);
+            MonitorServiceImpl monitorService = new MonitorServiceImpl(new MonitorRepositoryVertxFile(DB_FILENAME, vertx.fileSystem()), statusReader);
+            monitorServiceReference.set(monitorService);
+            statusReaderReference.set(statusReader);
 
             super.start(monitorService, 8080);
         }
@@ -48,9 +58,14 @@ public class MonitorVerticleTest {
 
     @Before
     public void setUp(TestContext context) {
+        File file = new File(DB_FILENAME);
+        if (file.exists()) {
+            file.delete();
+        }
+
         vertx = Vertx.vertx();
         vertx.deployVerticle(MonitorVerticleTestsetup.class.getName(), context.asyncAssertSuccess());
-        contract = new MyContract(vertx, monitorServiceReference, statusReaderReference);
+        contract = new MonitorContractHttp(vertx, MonitorVerticleTestsetup.monitorServiceReference, MonitorVerticleTestsetup.statusReaderReference);
     }
 
     @After
@@ -73,16 +88,12 @@ public class MonitorVerticleTest {
         contract.statusUpdatesAreSeenInResult();
     }
 
-    // For some reason VertxUnitRunner attempts to run my protected non-test methods (getAllServices, add, remove) as
-    // tests and I this stops us from letting MonitorVerticleTest directly extend MonitorContract
-    // (see: MonitorServiceImplTest) but instead we  have to use this kind of ugly hack. Won't dive in to vertx test
-    // internals to fix this so it'll have to stay for now
-    static class MyContract extends MonitorContract {
+    static class MonitorContractHttp extends MonitorContract {
         private Vertx vertx;
         private AtomicReference<MonitorService> monitorServiceReference;
         private AtomicReference<StatusReaderInMemory> statusReaderReference;
 
-        public MyContract(Vertx vertx, AtomicReference<MonitorService> monitorServiceReference, AtomicReference<StatusReaderInMemory> statusReaderReference) {
+        public MonitorContractHttp(Vertx vertx, AtomicReference<MonitorService> monitorServiceReference, AtomicReference<StatusReaderInMemory> statusReaderReference) {
             this.vertx = vertx;
             this.monitorServiceReference = monitorServiceReference;
             this.statusReaderReference = statusReaderReference;
@@ -96,12 +107,10 @@ public class MonitorVerticleTest {
             CountDownLatch answerLatch = new CountDownLatch(1);
             AtomicReference<JsonObject> result = new AtomicReference<>();
 
-            vertx.createHttpClient().getNow(8080, "localhost", "/service",
-                    response -> {
-                        response.handler(body -> {
-                            result.set(body.toJsonObject());
-                            answerLatch.countDown();
-                        });
+            WebClient.create(vertx).get(8080, "localhost", "/service")
+                    .send(ar -> {
+                        result.set(ar.result().bodyAsJsonObject());
+                        answerLatch.countDown();
                     });
             answerLatch.await(1, TimeUnit.SECONDS);
             assertFalse(answerLatch.getCount() > 0);
@@ -117,18 +126,13 @@ public class MonitorVerticleTest {
             CountDownLatch answerLatch = new CountDownLatch(1);
             AtomicReference<JsonObject> result = new AtomicReference<>();
 
-            String formValue = "name=" + serviceName + "&url=" + url;
-            vertx.createHttpClient().post(8080, "localhost", "/service")
-                    .handler(response -> {
-                        response.bodyHandler(body -> {
-                            result.set(body.toJsonObject());
-                            answerLatch.countDown();
-                        });
-                    })
-                    .putHeader("content-type", "application/x-www-form-urlencoded")
-                    .putHeader("content-length", Integer.toString(formValue.length()))
-                    .write(formValue)
-                    .end();
+            MultiMap formData = MultiMap.caseInsensitiveMultiMap().add("name", serviceName).add("url", url);
+            WebClient.create(vertx).post(8080, "localhost", "/service")
+                    .sendForm(formData,
+                            ar -> {
+                                result.set(ar.result().bodyAsJsonObject());
+                                answerLatch.countDown();
+                            });
             answerLatch.await(1, TimeUnit.SECONDS);
             assertFalse(answerLatch.getCount() > 0);
 
@@ -139,9 +143,8 @@ public class MonitorVerticleTest {
         protected void remove(String serviceId) throws Exception {
             CountDownLatch answerLatch = new CountDownLatch(1);
 
-            vertx.createHttpClient().delete(8080, "localhost", "/service/" + serviceId)
-                    .handler(response -> answerLatch.countDown())
-                    .end();
+            WebClient.create(vertx).delete(8080, "localhost", "/service/" + serviceId)
+                    .send(ar -> answerLatch.countDown());
             answerLatch.await(1, TimeUnit.SECONDS);
             assertFalse(answerLatch.getCount() > 0);
         }

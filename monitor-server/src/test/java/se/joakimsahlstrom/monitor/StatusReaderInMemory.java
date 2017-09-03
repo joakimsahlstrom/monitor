@@ -1,5 +1,6 @@
 package se.joakimsahlstrom.monitor;
 
+import rx.Single;
 import se.joakimsahlstrom.monitor.model.Status;
 
 import java.net.URL;
@@ -11,8 +12,8 @@ public class StatusReaderInMemory implements StatusReader {
     private Map<String, Status> statuses = new HashMap<>();
 
     @Override
-    public Status getStatus(URL url) {
-        return statuses.getOrDefault(url.toString(), Status.FAIL);
+    public Single<Status> getStatus(URL url) {
+        return Single.just(statuses.getOrDefault(url.toString(), Status.FAIL));
     }
 
     public void setStatus(String url, Status status) {

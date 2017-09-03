@@ -1,14 +1,12 @@
 package se.joakimsahlstrom.monitor;
 
+import rx.Observable;
+import rx.Single;
 import se.joakimsahlstrom.monitor.model.Service;
 import se.joakimsahlstrom.monitor.model.ServiceId;
 
-import java.util.Collection;
-
 public interface MonitorRepository {
-    Collection<Service> readAllServices();
-    void createOrUpdateService(Service service);
-    void delete(ServiceId id);
-
-    Service get(ServiceId serviceId);
+    Observable<Service> readAllServices();
+    Single<Void> createOrUpdateService(Service service);
+    Single<Void> delete(ServiceId id);
 }

@@ -1,14 +1,15 @@
 package se.joakimsahlstrom.monitor;
 
+import rx.Observable;
+import rx.Single;
 import se.joakimsahlstrom.monitor.model.Service;
 import se.joakimsahlstrom.monitor.model.ServiceId;
 import se.joakimsahlstrom.monitor.model.ServiceName;
 
 import java.net.URL;
 import java.time.LocalDateTime;
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.Objects;
-import java.util.Set;
 
 public class MonitorServiceImpl implements MonitorService {
     private MonitorRepository monitorRepository;
@@ -20,34 +21,33 @@ public class MonitorServiceImpl implements MonitorService {
     }
 
     @Override
-    public Set<Service> getAllServices() {
-        return new HashSet<>(monitorRepository.readAllServices());
+    public Observable<Service> getAllServices() {
+        return monitorRepository.readAllServices();
     }
 
     @Override
-    public ServiceId add(ServiceName serviceName, URL url) {
+    public Single<ServiceId> add(ServiceName serviceName, URL url) {
         // Allow multiple services with same url and name!
-        Service createService = Service.createNew(serviceName, url);
-        monitorRepository.createOrUpdateService(createService);
-        return createService.getId();
+        Service createdService = Service.createNew(serviceName, url);
+        return monitorRepository.createOrUpdateService(createdService)
+                .map(v -> createdService.getId());
     }
 
     @Override
-    public void remove(ServiceId id) {
-        monitorRepository.delete(id);
+    public Single<Void> remove(ServiceId id) {
+        return monitorRepository.delete(id);
     }
 
     @Override
     public void updateAllStatuses() {
-        monitorRepository.readAllServices().stream()
-                .map(Service::getId)
-                .forEach(this::updateStatus);
+        ArrayList<Service> services = monitorRepository.readAllServices()
+                .collect(ArrayList<Service>::new, (l, service) -> l.add(service))
+                .toBlocking().single();
+        services.forEach(s -> updateStatus(s).toBlocking().value());
     }
 
-    @Override
-    public void updateStatus(ServiceId serviceId) {
-        Service service = monitorRepository.get(serviceId);
-        monitorRepository.createOrUpdateService(
-                service.withNewStatus(statusReader.getStatus(service.getUrl()), LocalDateTime.now()));
+    private Single<Void> updateStatus(Service service) {
+        return statusReader.getStatus(service.getUrl())
+                .flatMap(status -> monitorRepository.createOrUpdateService(service.withNewStatus(status, LocalDateTime.now())));
     }
 }

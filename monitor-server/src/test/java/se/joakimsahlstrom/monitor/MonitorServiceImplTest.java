@@ -6,6 +6,7 @@ import se.joakimsahlstrom.monitor.model.ServiceName;
 import se.joakimsahlstrom.monitor.model.Status;
 
 import java.net.URL;
+import java.util.HashSet;
 import java.util.Set;
 
 public class MonitorServiceImplTest extends MonitorContract {
@@ -14,17 +15,17 @@ public class MonitorServiceImplTest extends MonitorContract {
 
     @Override
     public Set<Service> getAllServices() {
-        return monitor.getAllServices();
+        return new HashSet<>(monitor.getAllServices().toList().toBlocking().single());
     }
 
     @Override
     public ServiceId add(String serviceName, String url) throws Exception {
-        return monitor.add(ServiceName.valueOf(serviceName), new URL(url));
+        return monitor.add(ServiceName.valueOf(serviceName), new URL(url)).toBlocking().value();
     }
 
     @Override
     public void remove(String serviceId) {
-        monitor.remove(ServiceId.valueOf(serviceId));
+        monitor.remove(ServiceId.valueOf(serviceId)).toBlocking().value();
     }
 
     @Override
