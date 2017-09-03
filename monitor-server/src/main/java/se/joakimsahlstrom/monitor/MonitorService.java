@@ -5,10 +5,8 @@ import rx.Single;
 import se.joakimsahlstrom.monitor.model.Service;
 import se.joakimsahlstrom.monitor.model.ServiceId;
 import se.joakimsahlstrom.monitor.model.ServiceName;
-import se.joakimsahlstrom.monitor.model.Status;
 
 import java.net.URL;
-import java.util.Set;
 
 /**
  * Created by joakim on 2017-09-02.

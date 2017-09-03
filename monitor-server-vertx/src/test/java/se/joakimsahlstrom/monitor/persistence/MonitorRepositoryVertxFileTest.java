@@ -7,8 +7,6 @@ import se.joakimsahlstrom.monitor.MonitorRepositoryContract;
 
 import java.io.File;
 
-import static org.junit.Assert.*;
-
 public class MonitorRepositoryVertxFileTest extends MonitorRepositoryContract {
 
     @Before

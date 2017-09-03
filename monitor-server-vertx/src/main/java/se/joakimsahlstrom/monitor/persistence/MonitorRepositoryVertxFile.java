@@ -2,7 +2,6 @@ package se.joakimsahlstrom.monitor.persistence;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.Json;
-import io.vertx.rx.java.RxHelper;
 import io.vertx.rxjava.core.file.FileSystem;
 import rx.Emitter;
 import rx.Observable;
