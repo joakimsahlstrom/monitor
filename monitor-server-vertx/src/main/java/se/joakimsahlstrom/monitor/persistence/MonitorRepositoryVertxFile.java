@@ -6,6 +6,7 @@ import io.vertx.rxjava.core.file.FileSystem;
 import rx.Emitter;
 import rx.Observable;
 import rx.Single;
+import rx.SingleSubscriber;
 import rx.functions.Action1;
 import se.joakimsahlstrom.monitor.MonitorRepository;
 import se.joakimsahlstrom.monitor.model.Service;
@@ -50,33 +51,32 @@ public class MonitorRepositoryVertxFile implements MonitorRepository {
                 readAllServices()
                         .filter(s -> !s.getId().equals(service.getId()))
                         .map(PersistedService::create)
-                        .collect(() -> new ArrayList<PersistedService>(), (l, s) -> l.add(s))
+                        .collect(ArrayList<PersistedService>::new, (l, s) -> l.add(s))
                         .subscribe(services -> {
                             services.add(PersistedService.create(service));
-                            fileSystem.writeFile(
-                                    filePath,
-                                    toRxBuffer(Json.encodeToBuffer(new PersistedServices(services))),
-                                    ar -> subscriber.onSuccess(null));
+                            writeServices(subscriber, services);
                         }));
-    }
-
-    private io.vertx.rxjava.core.buffer.Buffer toRxBuffer(Buffer buffer) {
-        return new io.vertx.rxjava.core.buffer.Buffer(buffer);
     }
 
     @Override
     public Single<Void> delete(ServiceId id) {
-        return Single.create(subsriber ->
+        return Single.create(subscriber ->
                 readAllServices()
                         .filter(s -> !s.getId().equals(id))
                         .map(PersistedService::create)
-                        .collect(() -> new ArrayList<PersistedService>(), (l, s) -> l.add(s))
-                        .subscribe(services ->
-                            fileSystem.writeFile(
-                                    filePath,
-                                    toRxBuffer(Json.encodeToBuffer(new PersistedServices(services))),
-                                    ar -> subsriber.onSuccess(null))
-                        ));
+                        .collect(ArrayList<PersistedService>::new, (l, s) -> l.add(s))
+                        .subscribe(services -> writeServices(subscriber, services)));
+    }
+
+    private FileSystem writeServices(SingleSubscriber<? super Void> subscriber, ArrayList<PersistedService> services) {
+        return fileSystem.writeFile(
+                filePath,
+                toRxBuffer(Json.encodeToBuffer(new PersistedServices(services))),
+                ar -> subscriber.onSuccess(null));
+    }
+
+    private io.vertx.rxjava.core.buffer.Buffer toRxBuffer(Buffer buffer) {
+        return new io.vertx.rxjava.core.buffer.Buffer(buffer);
     }
 
 }

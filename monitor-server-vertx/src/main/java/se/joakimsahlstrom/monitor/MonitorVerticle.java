@@ -71,22 +71,23 @@ public class MonitorVerticle extends AbstractVerticle {
 
         router.get("/service")
                 .produces("application/json; charset=utf-8")
-                .handler(getServicesHandler(monitor));
+                .handler(getHandler(monitor));
         router.post("/service").handler(BodyHandler.create()); // Needed for FORM attribute processing
-        router.post("/service").handler(postServiceHandler(monitor));
-        router.delete("/service/:serviceId").handler(deleteServiceHandler(monitor));
+        router.post("/service").handler(postHandler(monitor));
+        router.delete("/service/:serviceId").handler(deleteHandler(monitor));
 
         httpServer.requestHandler(router::accept)
                 .listen(port);
     }
 
-    public void startBackground(MonitorService monitorService, long interval) {
-        vertx.setPeriodic(interval, e -> {
+    public void startBackground(MonitorService monitorService, long delay) {
+        // Using periodic here, thus assuming refresh takes shorter time than delay
+        vertx.setPeriodic(delay, e -> {
             vertx.executeBlocking(f -> monitorService.updateAllStatuses(), ar -> {});
         });
     }
 
-    private Handler<RoutingContext> getServicesHandler(MonitorService monitor) {
+    private Handler<RoutingContext> getHandler(MonitorService monitor) {
         return context -> {
             // We stream the entire response here, a bit unnecessary but i wanted to try it
             HttpServerResponse response = context.response()
@@ -101,7 +102,7 @@ public class MonitorVerticle extends AbstractVerticle {
         };
     }
 
-    class Delimiter {
+    private class Delimiter {
         boolean first = true;
 
         String get() {
@@ -114,7 +115,7 @@ public class MonitorVerticle extends AbstractVerticle {
         }
     }
 
-    private Handler<RoutingContext> postServiceHandler(MonitorService monitor) {
+    private Handler<RoutingContext> postHandler(MonitorService monitor) {
         // lets respond with newly created service id, nice to have in testing etc
         return context ->
                 monitor.add(getServiceName(context), getUrl(context))
@@ -136,7 +137,7 @@ public class MonitorVerticle extends AbstractVerticle {
         }
     }
 
-    private Handler<RoutingContext> deleteServiceHandler(MonitorService monitor) {
+    private Handler<RoutingContext> deleteHandler(MonitorService monitor) {
         return context ->
                 monitor.remove(ServiceId.valueOf(context.request().getParam("serviceId")))
                         .subscribe(v -> context.response().end("OK"));

@@ -11,7 +11,7 @@ import java.net.URL;
 /**
  * Created by joakim on 2017-09-02.
  *
- * I wanted to maintain an reactive approach, some decision could be challenged, like having
+ * I wanted to maintain a reactive approach, some decision could be challenged, like having
  * getAllServices return Observable<Service> instead of Single<Collection<Service>>
  */
 public interface MonitorService {
