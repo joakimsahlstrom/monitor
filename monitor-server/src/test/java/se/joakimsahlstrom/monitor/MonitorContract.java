@@ -53,6 +53,11 @@ public abstract class MonitorContract {
         assertStatus(service2, Status.FAIL);
     }
 
+    @Test
+    public void canRunStatusCheckWithoutData() throws Exception {
+        triggerStatusesCheck();
+    }
+
     // Helper methods
 
     protected void assertStatus(ServiceId serviceId, Status ok) throws Exception {

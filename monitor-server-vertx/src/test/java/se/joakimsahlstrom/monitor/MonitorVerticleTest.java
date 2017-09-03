@@ -88,6 +88,11 @@ public class MonitorVerticleTest {
         contract.statusUpdatesAreSeenInResult();
     }
 
+    @Test
+    public void canRunStatusCheckWithoutData() throws Exception {
+        contract.canRunStatusCheckWithoutData();
+    }
+
     static class MonitorContractHttp extends MonitorContract {
         private Vertx vertx;
         private AtomicReference<MonitorService> monitorServiceReference;

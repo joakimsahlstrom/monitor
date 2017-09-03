@@ -80,6 +80,12 @@ public class MonitorVerticle extends AbstractVerticle {
                 .listen(port);
     }
 
+    public void startBackground(MonitorService monitorService, long interval) {
+        vertx.setPeriodic(interval, e -> {
+            vertx.executeBlocking(f -> monitorService.updateAllStatuses(), ar -> {});
+        });
+    }
+
     private Handler<RoutingContext> getServicesHandler(MonitorService monitor) {
         return context -> {
             // We stream the entire response here, a bit unnecessary but i wanted to try it
