@@ -22,10 +22,12 @@ port is hard coded to port 8081
 
 monitor-web is a spring-boot app. Run from IntelliJ or 
 
-`monitor-parent/monitor-web > mvn spring-boot:run`
+`monitor-parent/monitor-web > mvn spring-boot:run` (untested)
 
 Web server is hard coded to port 8080
 
 GUI should now be available on `http://localhost:8080/services`
 
 Note: endpoints in monitor-web are hard-coded and both apps must thus run on the same machine :)
+
+File is stored in running dir of monitor-server-vertx and is called `monitors.json`
