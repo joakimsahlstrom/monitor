@@ -1,0 +1,84 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+    <head>
+        <title>Service Monitor</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <link rel="stylesheet"
+              href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css"
+              integrity="sha384-/Y6pD6FV/Vv2HJnA6t+vslU6fwYXjCFtcEpHbNJ0lyAFsXTsjBbfaDjzALeQsN6M"
+              crossorigin="anonymous"/>
+        <style>
+                .section { padding-bottom: 2em }
+        </style>
+
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+        <script>
+            $(document).ready(function () {
+                $(document).on('click', '.delete', function () {
+                    $.post({
+                        url: "/delete",
+                        data: {
+                            id: $(this).val()
+                        },
+                        success: function(data) {
+                            location.reload();
+                        }
+                    }).fail(function(response) {
+                        alert('Delete failed!');
+                    })
+                })
+            })
+
+            $(document).ready(function () {
+                $(document).on('click', '.add', function () {
+                    $.post({
+                        url: "/add",
+                        data: {
+                            name: $("#name").val(),
+                            url: $("#url").val()
+                        },
+                        success: function(data) {
+                            location.reload();
+                        }
+                    }).fail(function(response) {
+                        alert('Add failed! Name must be present, url must include protocol (e.g http://www.google.com)');
+                    });
+                })
+            })
+        </script>
+    </head>
+    <body>
+        <h3>Service Monitor</h3>
+
+        <h4>Add new service</h4>
+        <div class="section">
+                <div>
+                    Name/URL <input id="name" type="text" /> <input id="url" type="text"/> <button class='add'>Add</button>
+                </div>
+        </div>
+
+        <h4>Current service status</h4>
+        <div class="section">
+            <ul>
+                <table>
+                    <tr>
+                        <th>name</th>
+                        <th>url</th>
+                        <th>status</th>
+                        <th>timestamp</th>
+                        <th>delete</th>
+                    </tr>
+                    <tr th:each="service : ${services}">
+                        <td><span th:text="${service.name}"/></td>
+                        <td><span th:text="${service.url}"/></td>
+                        <td><span th:text="${service.status}"/></td>
+                        <td><span th:text="${service.lastCheck}"/></td>
+                        <td><button class='delete' th:value="${service.id}">Delete</button></td>
+                    </tr>
+                </table>
+            </ul>
+        </div>
+
+    </body>
+
+</html>

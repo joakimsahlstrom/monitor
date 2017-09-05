@@ -15,6 +15,8 @@ import se.joakimsahlstrom.monitor.model.ServiceId;
 import java.util.ArrayList;
 
 // This class is not threa-safe, decided to not spend any time trying (and likely eventually failing) to get that right
+// The main idea for the design is that we always expect a repository to perform atomic and thread safe operations
+// so one could argue that this implementation fulfills the interface rather poorly!
 public class MonitorRepositoryVertxFile implements MonitorRepository {
 
     private String filePath;
@@ -36,6 +38,7 @@ public class MonitorRepositoryVertxFile implements MonitorRepository {
                     if (ar.failed()) {
                         serviceEmitter.onCompleted();
                     } else {
+                        // Decoding is done on main vertx event thread? Maybe not smart?
                         PersistedServices persistedServices = Json.decodeValue(ar.result().toString(), PersistedServices.class);
                         persistedServices.getServices().stream()
                                 .forEach(service -> serviceEmitter.onNext(service));
@@ -71,6 +74,7 @@ public class MonitorRepositoryVertxFile implements MonitorRepository {
     private FileSystem writeServices(SingleSubscriber<? super Void> subscriber, ArrayList<PersistedService> services) {
         return fileSystem.writeFile(
                 filePath,
+                // Encoding is done on main vertx event thread? Maybe not smart?
                 toRxBuffer(Json.encodeToBuffer(new PersistedServices(services))),
                 ar -> subscriber.onSuccess(null));
     }

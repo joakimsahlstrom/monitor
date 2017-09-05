@@ -10,7 +10,7 @@ import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-
+// Data model for file storage
 public class PersistedService {
     public static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private String id;
@@ -20,6 +20,7 @@ public class PersistedService {
     private String lastCheck;
 
     public PersistedService() {
+        // for json mapper
     }
 
     public PersistedService(String id, String name, String url, String status, String lastCheck) {

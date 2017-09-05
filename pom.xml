@@ -22,6 +22,7 @@
     <modules>
         <module>monitor-server</module>
         <module>monitor-server-vertx</module>
+        <module>monitor-web</module>
     </modules>
 
 

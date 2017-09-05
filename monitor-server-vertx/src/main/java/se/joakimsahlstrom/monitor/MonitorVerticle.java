@@ -19,6 +19,9 @@ import java.util.Objects;
 
 /**
  * Created by joakim on 2017-09-02.
+ *
+ * A subclass of this class is required for actual verticle startup as no start()-method is implemented here
+ * @see MonitorVerticleSetup
  */
 public class MonitorVerticle extends AbstractVerticle {
 
@@ -65,12 +68,14 @@ public class MonitorVerticle extends AbstractVerticle {
         }
     }
 
+    // Setup server and request routing
+    // NOTE: I did not take the time to do proper error handling
     public void start(MonitorService monitor, int port) {
         HttpServer httpServer = vertx.createHttpServer();
         Router router = Router.router(vertx);
 
         router.get("/service")
-                .produces("application/json; charset=utf-8")
+                .produces("application/json")
                 .handler(getHandler(monitor));
         router.post("/service").handler(BodyHandler.create()); // Needed for FORM attribute processing
         router.post("/service").handler(postHandler(monitor));
@@ -80,12 +85,15 @@ public class MonitorVerticle extends AbstractVerticle {
                 .listen(port);
     }
 
+    // Setup scheduled jobs
     public void startBackground(MonitorService monitorService, long delay) {
         // Using periodic here, thus assuming refresh takes shorter time than delay
         vertx.setPeriodic(delay, e -> {
             vertx.executeBlocking(f -> monitorService.updateAllStatuses(), ar -> {});
         });
     }
+
+    // Request handler setups
 
     private Handler<RoutingContext> getHandler(MonitorService monitor) {
         return context -> {
@@ -98,9 +106,45 @@ public class MonitorVerticle extends AbstractVerticle {
                     .map(ServiceView::new)
                     .map(Json::encode)
                     .doOnCompleted(() -> response.end("] }"))
-                    .forEach(serviceViewJson -> response.write(delimiter.get() + serviceViewJson));
+                    .subscribe(serviceViewJson -> response.write(delimiter.get() + serviceViewJson));
         };
     }
+
+    private Handler<RoutingContext> postHandler(MonitorService monitor) {
+        // lets respond with newly created service id, nice to have in testing etc
+        return context ->
+                monitor.add(getServiceName(context), getUrl(context))
+                        .map(ServiceIdView::new)
+                        .map(Json::encode)
+                        .subscribe(serviceId -> context.response().end(serviceId));
+    }
+
+    private Handler<RoutingContext> deleteHandler(MonitorService monitor) {
+        return context ->
+                monitor.remove(getServiceId(context))
+                        .subscribe(v -> context.response().end("OK"));
+    }
+
+    // Helper methods
+
+    private ServiceId getServiceId(RoutingContext context) {
+        return ServiceId.valueOf(context.request().getParam("serviceId"));
+    }
+
+    private ServiceName getServiceName(RoutingContext context) {
+        return ServiceName.valueOf(context.request().getParam("name"));
+    }
+
+    private URL getUrl(RoutingContext context) {
+        String url = context.request().getParam("url");
+        try {
+            return new URL(url);
+        } catch (MalformedURLException e) {
+            throw new IllegalArgumentException("Bad url=" + url);
+        }
+    }
+
+    // Helper classes
 
     private class Delimiter {
         boolean first = true;
@@ -114,34 +158,5 @@ public class MonitorVerticle extends AbstractVerticle {
             }
         }
     }
-
-    private Handler<RoutingContext> postHandler(MonitorService monitor) {
-        // lets respond with newly created service id, nice to have in testing etc
-        return context ->
-                monitor.add(getServiceName(context), getUrl(context))
-                        .map(ServiceIdView::new)
-                        .map(Json::encode)
-                        .subscribe(serviceId -> context.response().end(serviceId));
-    }
-
-    private ServiceName getServiceName(RoutingContext context) {
-        return ServiceName.valueOf(context.request().getFormAttribute("name"));
-    }
-
-    private URL getUrl(RoutingContext context) {
-        String url = context.request().getFormAttribute("url");
-        try {
-            return new URL(url);
-        } catch (MalformedURLException e) {
-            throw new IllegalArgumentException("Bad url=" + url);
-        }
-    }
-
-    private Handler<RoutingContext> deleteHandler(MonitorService monitor) {
-        return context ->
-                monitor.remove(ServiceId.valueOf(context.request().getParam("serviceId")))
-                        .subscribe(v -> context.response().end("OK"));
-    }
-
 
 }

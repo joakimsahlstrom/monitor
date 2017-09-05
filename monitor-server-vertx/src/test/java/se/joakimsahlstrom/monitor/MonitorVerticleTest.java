@@ -37,8 +37,8 @@ public class MonitorVerticleTest {
 
     // For some reason VertxUnitRunner attempts to run my protected non-test methods (getAllServices, add, remove) as
     // tests and I this stops us from letting MonitorVerticleTest directly extend MonitorContract
-    // (see: MonitorServiceImplTest) but instead we  have to use this kind of ugly hack. Won't dive in to vertx test
-    // internals to fix this so it'll have to stay for now
+    // (see: MonitorServiceImplTest). Instead we have to use this kind of ugly hack. Won't dive in to vertx test
+    // internals to fix this so it'll have to stay
     private MonitorContractHttp contract;
 
     public static class MonitorVerticleTestsetup extends MonitorVerticle {
@@ -52,7 +52,7 @@ public class MonitorVerticleTest {
             monitorServiceReference.set(monitorService);
             statusReaderReference.set(statusReader);
 
-            super.start(monitorService, 8080);
+            super.start(monitorService, 8082);
         }
     }
 
@@ -112,7 +112,7 @@ public class MonitorVerticleTest {
             CountDownLatch answerLatch = new CountDownLatch(1);
             AtomicReference<JsonObject> result = new AtomicReference<>();
 
-            WebClient.create(vertx).get(8080, "localhost", "/service")
+            WebClient.create(vertx).get(8082, "localhost", "/service")
                     .send(ar -> {
                         result.set(ar.result().bodyAsJsonObject());
                         answerLatch.countDown();
@@ -132,7 +132,7 @@ public class MonitorVerticleTest {
             AtomicReference<JsonObject> result = new AtomicReference<>();
 
             MultiMap formData = MultiMap.caseInsensitiveMultiMap().add("name", serviceName).add("url", url);
-            WebClient.create(vertx).post(8080, "localhost", "/service")
+            WebClient.create(vertx).post(8082, "localhost", "/service")
                     .sendForm(formData,
                             ar -> {
                                 result.set(ar.result().bodyAsJsonObject());
@@ -148,7 +148,7 @@ public class MonitorVerticleTest {
         protected void remove(String serviceId) throws Exception {
             CountDownLatch answerLatch = new CountDownLatch(1);
 
-            WebClient.create(vertx).delete(8080, "localhost", "/service/" + serviceId)
+            WebClient.create(vertx).delete(8082, "localhost", "/service/" + serviceId)
                     .send(ar -> answerLatch.countDown());
             answerLatch.await(1, TimeUnit.SECONDS);
             assertFalse(answerLatch.getCount() > 0);

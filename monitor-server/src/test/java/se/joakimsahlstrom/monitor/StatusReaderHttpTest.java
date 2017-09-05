@@ -12,7 +12,7 @@ public class StatusReaderHttpTest {
     private final StatusReader statusReader = new StatusReaderHttp();
 
     @Test
-    @Ignore
+    @Ignore("Don´t do this during normal test case runs!")
     public void canTestUrl() throws Exception {
         assertEquals(Status.OK, statusReader.getStatus(new URL("http://www.google.com")));
         assertEquals(Status.FAIL, statusReader.getStatus(new URL("http://www.this_is_not_a_real_address_329649238476298472389.com")));

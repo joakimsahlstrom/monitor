@@ -30,7 +30,7 @@ public class MonitorServiceImpl implements MonitorService {
         // Allow multiple services with same url and name!
         Service createdService = Service.createNew(serviceName, url);
         return monitorRepository.createOrUpdateService(createdService)
-                .map(v -> createdService.getId());
+                .map(nil -> createdService.getId());
     }
 
     @Override

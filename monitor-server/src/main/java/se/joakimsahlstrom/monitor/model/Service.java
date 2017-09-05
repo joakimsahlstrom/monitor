@@ -21,7 +21,7 @@ public class Service {
         this.name = requireNonNull(name);
         this.url = requireNonNull(url);
         this.status = requireNonNull(status);
-        this.lastCheck = lastCheck;
+        this.lastCheck = requireNonNull(lastCheck);
     }
 
     public static Service createNew(ServiceName serviceName, URL url) {
